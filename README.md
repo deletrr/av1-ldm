@@ -1,4 +1,4 @@
-# Laboratório de Desenvolvimento Multiplataforma - Avaliação 1
+# LDM - Avaliação 1
 
 ## Integrantes do Grupo
 
