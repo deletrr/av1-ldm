@@ -98,14 +98,11 @@ Cada CRUD possui:
 - ✅ **Tela Home** com visão geral
 - ✅ **Busca global** na Home e Clipes
 - ✅ **Bottom Navigation** com 5 abas
-- ✅ **Tema escuro** Spotify (`#121212`, `#1DB954`)
-- ✅ **Músicas embutidas** nos álbuns
 - ✅ **Seleção de álbuns/músicas** nas playlists
 - ✅ **Logout** na TopAppBar
 
 ### Multiplataforma (KMP)
 - ✅ **Target Android** (`androidTarget()`) com Ktor OkHttp engine
-- ✅ **Target Desktop** (`jvm("desktop")`) com Ktor CIO engine
 - ✅ **Target Web/Wasm** (`wasmJs()`) com Ktor engine + `ComposeViewport`
 - ✅ **`expect`/`actual`** para `currentTimeMillis()` em todas as plataformas
 - ✅ **`RepositorioRemoto`** em `commonMain` usando Ktor + Firebase REST API
@@ -182,12 +179,6 @@ object RepositorioRemoto {
 ./gradlew :androidApp:installDebug
 ```
 Ou abra no Android Studio, selecione a configuração **androidApp** e clique **Run ▶**
-
-### 🖥️ Executar no Desktop (JVM)
-
-```bash
-./gradlew :shared:run
-```
 
 ### 🌐 Executar na Web (WasmJs)
 
