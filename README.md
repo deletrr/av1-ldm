@@ -196,10 +196,4 @@ Ou abra no Android Studio, selecione a configuração **androidApp** e clique **
 ```
 Abrirá automaticamente no navegador em `http://localhost:8080`.
 
-## 🐛 Solução de Problemas
 
-| Erro | Solução |
-|---|---|
-| `Could not find org.nodejs:node` | Verifique se o repositório Ivy do Node.js está em `settings.gradle.kts` |
-| `Could not find com.yarnpkg:yarn` | Verifique se o repositório Ivy do Yarn está em `settings.gradle.kts` |
-| `plugin already on classpath` | Não declare `version` no `plugins {}` do `shared/build.gradle.kts` |
