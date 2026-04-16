@@ -14,16 +14,12 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
 object RepositorioRemoto {
-///  EM PRODUÇÃO UTILIZE VARIAVEIS DE AMBIENTE PARA API KEY
-///
-///  VOCE CONSEGUE EXTRAIR O ID E A APIKEY DO ARQUIVO google-services.JSON
 
-    private const val PROJECT_ID = "SUA_ID_AQUI"
+    private const val PROJECT_ID = "SEU_PROJECT_ID_AQUI"
     private const val BASE_URL = "https://firestore.googleapis.com/v1/projects/$PROJECT_ID/databases/(default)/documents"
     private const val AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts"
     private const val API_KEY = "SUA_API_KEY_AQUI"
 
-    // idToken e uid persistidos em memória durante a sessão
     private var idToken: String = ""
     private var uid: String = ""
 
@@ -39,7 +35,7 @@ object RepositorioRemoto {
     }
 
     // ════════════════════════════════════════════
-    //  AUTH  (Firebase Auth REST)
+    //  AUTH
     // ════════════════════════════════════════════
 
     @Serializable
@@ -79,11 +75,9 @@ object RepositorioRemoto {
         val bodyText = response.bodyAsText()
         if (response.status != HttpStatusCode.OK) {
             val errBody = runCatching { json.decodeFromString<AuthErrorWrapper>(bodyText) }.getOrNull()
-            val errMsg = errBody?.error?.message ?: bodyText
-            throw Exception(mapFirebaseError(errMsg))
+            throw Exception(mapFirebaseError(errBody?.error?.message ?: bodyText))
         }
         val resp = json.decodeFromString<AuthResponse>(bodyText)
-        if (resp.idToken.isEmpty()) throw Exception("Token não recebido do servidor")
         idToken = resp.idToken
         uid = resp.localId
     }
@@ -96,21 +90,16 @@ object RepositorioRemoto {
         val bodyText = response.bodyAsText()
         if (response.status != HttpStatusCode.OK) {
             val errBody = runCatching { json.decodeFromString<AuthErrorWrapper>(bodyText) }.getOrNull()
-            val errMsg = errBody?.error?.message ?: bodyText
-            throw Exception(mapFirebaseError(errMsg))
+            throw Exception(mapFirebaseError(errBody?.error?.message ?: bodyText))
         }
         val resp = json.decodeFromString<AuthResponse>(bodyText)
-        if (resp.idToken.isEmpty()) throw Exception("Token não recebido do servidor")
         idToken = resp.idToken
         uid = resp.localId
 
-        // Cria perfil do usuário no Firestore
-        runCatching {
-            criarDocumento("usuarios", uid, wrapFields(buildJsonObject {
-                put("nome", stringField(nome))
-                put("email", stringField(email))
-            }))
-        }
+        criarDocumento("usuarios", uid, wrapFields(buildJsonObject {
+            put("nome", stringField(nome))
+            put("email", stringField(email))
+        }))
         Unit
     }
 
@@ -119,26 +108,49 @@ object RepositorioRemoto {
     fun userId() = uid
 
     // ════════════════════════════════════════════
-    //  FIRESTORE HELPERS
+    //  FIRESTORE HELPERS (ISOLAMENTO POR USERID)
     // ════════════════════════════════════════════
 
     private suspend fun criarDocumento(colecao: String, docId: String, body: JsonObject): HttpResponse {
-        val url = "$BASE_URL/$colecao/$docId?key=$API_KEY"
-        return client.patch(url) {
+        return client.patch("$BASE_URL/$colecao/$docId?key=$API_KEY") {
             header(HttpHeaders.Authorization, "Bearer $idToken")
             contentType(ContentType.Application.Json)
             setBody(body)
         }
     }
 
-    private suspend fun obterDocumentos(colecao: String): JsonObject {
-        val url = "$BASE_URL/$colecao?key=$API_KEY"
-        val response = client.get(url) {
-            header(HttpHeaders.Authorization, "Bearer $idToken")
+    // Agora usa runQuery para filtrar apenas dados do utilizador atual 
+    private suspend fun obterDocumentos(colecao: String): List<JsonObject> {
+        val url = "https://firestore.googleapis.com/v1/projects/$PROJECT_ID/databases/(default)/documents:runQuery?key=$API_KEY"
+        
+        val query = buildJsonObject {
+            put("structuredQuery", buildJsonObject {
+                put("from", buildJsonArray {
+                    add(buildJsonObject { put("collectionId", colecao) })
+                })
+                put("where", buildJsonObject {
+                    put("fieldFilter", buildJsonObject {
+                        put("field", buildJsonObject { put("fieldPath", "userId") })
+                        put("op", "EQUAL")
+                        put("value", buildJsonObject { put("stringValue", uid) })
+                    })
+                })
+            })
         }
-        if (response.status != HttpStatusCode.OK) return buildJsonObject { }
+
+        val response = client.post(url) {
+            header(HttpHeaders.Authorization, "Bearer $idToken")
+            contentType(ContentType.Application.Json)
+            setBody(query)
+        }
+
+        if (response.status != HttpStatusCode.OK) return emptyList()
+        
         val bodyText = response.bodyAsText()
-        return runCatching { json.decodeFromString<JsonObject>(bodyText) }.getOrElse { buildJsonObject { } }
+        val results = json.decodeFromString<JsonArray>(bodyText)
+        
+        // No runQuery, cada item do array tem uma chave "document" 
+        return results.mapNotNull { it.jsonObject["document"]?.jsonObject }
     }
 
     private suspend fun deletarDocumento(colecao: String, docId: String) {
@@ -148,7 +160,7 @@ object RepositorioRemoto {
     }
 
     // ════════════════════════════════════════════
-    //  CONVERSORES  Firestore → Kotlin
+    //  CONVERSORES
     // ════════════════════════════════════════════
 
     private fun JsonObject.str(field: String): String =
@@ -177,17 +189,13 @@ object RepositorioRemoto {
                 it.jsonObject["mapValue"]?.jsonObject
             } ?: emptyList()
 
-    private fun parseDocuments(response: JsonObject): List<JsonObject> =
-        response["documents"]?.jsonArray?.map { it.jsonObject } ?: emptyList()
-
     // ════════════════════════════════════════════
-    //  BUILDERS  Kotlin → Firestore JSON
+    //  BUILDERS
     // ════════════════════════════════════════════
 
     private fun stringField(v: String) = buildJsonObject { put("stringValue", v) }
     private fun intField(v: Long) = buildJsonObject { put("integerValue", v.toString()) }
     private fun boolField(v: Boolean) = buildJsonObject { put("booleanValue", v) }
-
     private fun arrayOfLongs(list: List<Long>) = buildJsonObject {
         put("arrayValue", buildJsonObject {
             put("values", buildJsonArray {
@@ -195,7 +203,6 @@ object RepositorioRemoto {
             })
         })
     }
-
     private fun wrapFields(fields: JsonObject) = buildJsonObject { put("fields", fields) }
 
     // ════════════════════════════════════════════
@@ -203,8 +210,7 @@ object RepositorioRemoto {
     // ════════════════════════════════════════════
 
     suspend fun listarArtistas(): List<Artista> {
-        val resp = obterDocumentos("artistas")
-        return parseDocuments(resp).map { doc ->
+        return obterDocumentos("artistas").map { doc ->
             Artista(doc.long("id"), doc.str("nome"), doc.str("genero"), doc.str("dataInicio"), doc.bool("ativo"))
         }
     }
@@ -229,8 +235,7 @@ object RepositorioRemoto {
     // ════════════════════════════════════════════
 
     suspend fun listarAlbuns(): List<Album> {
-        val resp = obterDocumentos("albuns")
-        return parseDocuments(resp).map { doc ->
+        return obterDocumentos("albuns").map { doc ->
             Album(
                 doc.long("id"), doc.str("titulo"), doc.long("artistaId"), doc.str("lancamento"),
                 doc.str("duracao"), doc.bool("disponivel"),
@@ -281,8 +286,7 @@ object RepositorioRemoto {
     // ════════════════════════════════════════════
 
     suspend fun listarClipes(): List<Clipe> {
-        val resp = obterDocumentos("clipes")
-        return parseDocuments(resp).map { doc ->
+        return obterDocumentos("clipes").map { doc ->
             Clipe(
                 doc.long("id"), doc.str("titulo"), doc.str("artista"),
                 doc.str("duracao"), doc.str("dataLancamento"), doc.bool("disponivel")
@@ -311,8 +315,7 @@ object RepositorioRemoto {
     // ════════════════════════════════════════════
 
     suspend fun listarPlaylists(): List<Playlist> {
-        val resp = obterDocumentos("playlists")
-        return parseDocuments(resp).map { doc ->
+        return obterDocumentos("playlists").map { doc ->
             Playlist(
                 doc.long("id"), doc.str("nome"), doc.str("descricao"), doc.str("criadaEm"),
                 doc.bool("publica"), doc.int("totalItens"), doc.longList("albumIds"), doc.longList("musicaIds")
