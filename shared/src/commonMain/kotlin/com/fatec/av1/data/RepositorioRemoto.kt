@@ -15,10 +15,10 @@ import kotlinx.serialization.json.*
 
 object RepositorioRemoto {
 
-    private const val PROJECT_ID = "av1-ldm"
+    private const val PROJECT_ID = "SEU_PROJECT_ID_AQUI"
     private const val BASE_URL = "https://firestore.googleapis.com/v1/projects/$PROJECT_ID/databases/(default)/documents"
     private const val AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts"
-    private const val API_KEY = "AIzaSyBiSU2065oSwXlL7tOZz6j8EBnzb1dVUxY"
+    private const val API_KEY = "SUA_API_KEY_AQUI"
 
     private var idToken: String = ""
     private var uid: String = ""
