@@ -15,10 +15,10 @@ import kotlinx.serialization.json.*
 
 object RepositorioRemoto {
 
-    private const val PROJECT_ID = "SEU_PROJECT_ID_AQUI"
+    private const val PROJECT_ID = "av1-ldm"
     private const val BASE_URL = "https://firestore.googleapis.com/v1/projects/$PROJECT_ID/databases/(default)/documents"
     private const val AUTH_URL = "https://identitytoolkit.googleapis.com/v1/accounts"
-    private const val API_KEY = "SUA_API_KEY_AQUI"
+    private const val API_KEY = "AIzaSyBiSU2065oSwXlL7tOZz6j8EBnzb1dVUxY"
 
     private var idToken: String = ""
     private var uid: String = ""
@@ -119,10 +119,10 @@ object RepositorioRemoto {
         }
     }
 
-    // Agora usa runQuery para filtrar apenas dados do utilizador atual 
+    // Agora usa runQuery para filtrar apenas dados do utilizador atual
     private suspend fun obterDocumentos(colecao: String): List<JsonObject> {
         val url = "https://firestore.googleapis.com/v1/projects/$PROJECT_ID/databases/(default)/documents:runQuery?key=$API_KEY"
-        
+
         val query = buildJsonObject {
             put("structuredQuery", buildJsonObject {
                 put("from", buildJsonArray {
@@ -145,11 +145,11 @@ object RepositorioRemoto {
         }
 
         if (response.status != HttpStatusCode.OK) return emptyList()
-        
+
         val bodyText = response.bodyAsText()
         val results = json.decodeFromString<JsonArray>(bodyText)
-        
-        // No runQuery, cada item do array tem uma chave "document" 
+
+        // No runQuery, cada item do array tem uma chave "document"
         return results.mapNotNull { it.jsonObject["document"]?.jsonObject }
     }
 
