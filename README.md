@@ -14,11 +14,6 @@
 ## Video de Teste de Funcionalidades android/web
 https://youtu.be/iEx-M_rvBKw
 
-## Github do Projeto Sem ID e Api-Key do Firebase
-## PRIVADO NO MOMENTO - ATÉ A CORREÇÃO DO PROFESSOR
-
-https://github.com/deletrr/av1-ldm
-
 ## Sobre o Projeto
 
 Aplicativo **Kotlin Multiplatform (KMP)** com **Compose Multiplatform**, simulando um sistema de gerenciamento de músicas inspirado no **Spotify**. O app suporta três plataformas: **Android**, **Desktop (JVM)** e **Web (WasmJs)**.
